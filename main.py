@@ -8,9 +8,14 @@ from asteroidfield import AsteroidField
 from bullet import Bullet
 from terry import Terry
 
+from collision import Collision
+
+import player_view
+
 # Game states
 GAME_PLAYING = 0
 GAME_OVER = 1
+
 
 def draw_text(screen, text, size, color, x, y, center=True):
     """Helper function to draw text on screen"""
@@ -77,11 +82,18 @@ def main():
     score = 0
     clock = pygame.time.Clock()
 
+    views = ["overhead", "player"]
+    k = 0
+    N = len(views)
+    display_mode = views[k]
+    
+
     # Initialize game objects
     updatables, drawables, asteroids, bullets, player, asteroid_field = reset_game()
 
     dt = 0
-
+    display_mode = views[k]
+    print(display_mode)
 
     while True:
         for event in pygame.event.get():
@@ -96,6 +108,9 @@ def main():
                         updatables, drawables, asteroids, bullets, player, asteroid_field = reset_game()
                     elif event.key == pygame.K_ESCAPE:
                         return
+                if event.key == pygame.K_TAB:
+                    k = (k + 1) % N
+                    display_mode = views[k]
 
         # Clear screen
         screen.fill((0, 0, 0))
@@ -107,12 +122,16 @@ def main():
             # Check collision between player and asteroids
             for asteroid in asteroids:
                 if asteroid.is_colliding(player):
-                    print("Game over!")
-                    print(f"Final Score: {score}")
-                    audio.stop_background_music()
-                    audio.play_game_over_sound()
-                    game_state = GAME_OVER
-                    break
+                    if Collision.circle_triangle_collision(
+                        asteroid.position, asteroid.radius,
+                        player.triangle()[0], player.triangle()[1], player.triangle()[2]):
+                    #if Collision.triangle_vs_circle(ax, ay, bx, by, cx, cy, player.x, player.y, player.radius):
+                        print("Game over!")
+                        print(f"Final Score: {score}")
+                        audio.stop_background_music()
+                        audio.play_game_over_sound()
+                        game_state = GAME_OVER
+                        break
             
             # Check collision between bullets and asteroids
             for asteroid in asteroids:
@@ -128,9 +147,12 @@ def main():
                         bullet.kill()
 
             # Draw all game objects
-            for drawable in drawables:
-                drawable.draw(screen)
-
+            if display_mode == "overhead":
+                for drawable in drawables:
+                    drawable.draw(screen)
+            elif display_mode == "player":
+                player_view.draw_player_view(screen, player, asteroids, bullets)
+            
             # Draw current score during gameplay
             draw_text(screen, f"Score: {score}", 36, (255, 255, 255), 100, 30, center=False)
 
